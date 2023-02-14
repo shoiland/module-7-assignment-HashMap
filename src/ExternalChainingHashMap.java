@@ -1,5 +1,5 @@
 import java.util.NoSuchElementException;
-
+import java.lang.Math;
 /**
  * Your implementation of a ExternalChainingHashMap.
  */
@@ -71,7 +71,44 @@ public class ExternalChainingHashMap<K, V> {
      */
     public V put(K key, V value) {
         // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
+        if (key == null || value == null){
+            throw new IllegalArgumentException();
+        }
+        float currentLoadFactor = (float)(this.size + 1) / INITIAL_CAPACITY;
+        if (currentLoadFactor > MAX_LOAD_FACTOR){
+            resizeBackingTable(2 * INITIAL_CAPACITY + 1);
+        }
+        int hash = key.hashCode();
+        int compressed = Math.abs(hash % INITIAL_CAPACITY);
+        if (table[compressed] == null){
+            ExternalChainingMapEntry<K, V> newEntry = new ExternalChainingMapEntry<>(key, value);
+            table[compressed] = newEntry;
+            this.size++;
+        } else {
+            V valueDuplicate = loopThroughSSL(table[compressed], key, value);
+            if (valueDuplicate != null){
+                return valueDuplicate;
+            }
+            ExternalChainingMapEntry<K, V> newEntry = new ExternalChainingMapEntry<>(key, value);
+            ExternalChainingMapEntry<K, V> temp = table[compressed];
+            table[compressed] = newEntry;
+            newEntry.setNext(temp);
+            this.size++;
+        }
         return null;
+    }
+
+    private V loopThroughSSL(ExternalChainingMapEntry<K, V> current, K key, V value){
+        V tempValue;
+        if (current.getKey().equals(key)){
+            tempValue = current.getValue();
+            current.setValue(value);
+        } else if (current.getNext() == null){
+            return null;
+        } else {
+            tempValue = loopThroughSSL(current.getNext(), key, value);
+        }
+        return tempValue;
     }
 
     /**
@@ -83,9 +120,30 @@ public class ExternalChainingHashMap<K, V> {
      * @throws java.util.NoSuchElementException   If the key is not in the map.
      */
     public V remove(K key) {
-        // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
+        if (key == null){
+            throw new IllegalArgumentException();
+        }
+        int hashKey = key.hashCode();
+        int compressionKey = Math.abs(hashKey % table.length);
+        if (table[compressionKey] == null){
+            return null;
+        }
+        table[compressionKey] = removeHelper(table[compressionKey], key);
         return null;
     }
+
+    private ExternalChainingMapEntry<K, V> removeHelper(ExternalChainingMapEntry<K, V> current, K keySearch) {
+        if (current == null){
+            return null;
+        }
+        if (current.getKey().equals(keySearch)){
+            return current.getNext();
+        }
+        current.setNext(removeHelper(current.getNext(), keySearch));
+        return current;
+    }
+
+
 
     /**
      * Helper method stub for resizing the backing table to length.
@@ -106,8 +164,35 @@ public class ExternalChainingHashMap<K, V> {
      */
     private void resizeBackingTable(int length) {
         // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
+        ExternalChainingMapEntry<K, V>[] newTable = (ExternalChainingMapEntry<K, V>[]) new ExternalChainingMapEntry[length];
+        for (int i = 0; i < table.length; i++){
+            if (table[i] != null){
+                ExternalChainingMapEntry<K, V> currentEntry = table[i];
+                resizingHelper(currentEntry, newTable);
+                table[i] = null;
+            }
+        }
+        table = newTable;
     }
 
+    private void resizingHelper(ExternalChainingMapEntry<K, V> entry, ExternalChainingMapEntry<K, V>[] newTable) {
+        K currentKey = entry.getKey();
+        int hashcode = currentKey.hashCode();
+        int compressed = Math.abs(hashcode % newTable.length);
+        ExternalChainingMapEntry<K, V> next = entry.getNext();
+        if (newTable[compressed] == null){
+            entry.setNext(null);
+            newTable[compressed] = entry;
+        } else {
+            ExternalChainingMapEntry<K, V> temp = newTable[compressed];
+            entry.setNext(null);
+            newTable[compressed] = entry;
+            entry.setNext(temp);
+        }
+        if (next != null) {
+            resizingHelper(next, newTable);
+        }
+    }
     /**
      * Returns the table of the map.
      *
