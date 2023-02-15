@@ -11,9 +11,12 @@ public class Main {
         phoneNum.put(1333, "Jude");
         phoneNum.put(2323, "Josh");
         phoneNum.put(1222, "Murphy");
+        phoneNum.put(253, "Doctor");
         phoneNum.put(2111, "Jesse");
+        phoneNum.put(37, "David");
         System.out.println("hey");
-        System.out.println(phoneNum.remove(3736));
-
+        System.out.println(phoneNum.remove(37));
+        System.out.println(phoneNum.remove(253));
     }
 }
+
