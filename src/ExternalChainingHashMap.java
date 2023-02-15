@@ -74,12 +74,12 @@ public class ExternalChainingHashMap<K, V> {
         if (key == null || value == null){
             throw new IllegalArgumentException();
         }
-        float currentLoadFactor = (float)(this.size + 1) / INITIAL_CAPACITY;
+        float currentLoadFactor = (float)(this.size + 1) / table.length;
         if (currentLoadFactor > MAX_LOAD_FACTOR){
-            resizeBackingTable(2 * INITIAL_CAPACITY + 1);
+            resizeBackingTable(2 * table.length + 1);
         }
         int hash = key.hashCode();
-        int compressed = Math.abs(hash % INITIAL_CAPACITY);
+        int compressed = Math.abs(hash % table.length);
         if (table[compressed] == null){
             ExternalChainingMapEntry<K, V> newEntry = new ExternalChainingMapEntry<>(key, value);
             table[compressed] = newEntry;
@@ -120,29 +120,37 @@ public class ExternalChainingHashMap<K, V> {
      * @throws java.util.NoSuchElementException   If the key is not in the map.
      */
     public V remove(K key) {
+        V foundValue = null;
         if (key == null){
             throw new IllegalArgumentException();
         }
+        //Get Key into correct format
         int hashKey = key.hashCode();
         int compressionKey = Math.abs(hashKey % table.length);
+        //Check if the array is empty at that location
         if (table[compressionKey] == null){
-            return null;
+            throw new NoSuchElementException();
         }
-        table[compressionKey] = removeHelper(table[compressionKey], key);
-        return null;
+        //It is not empty. Check if the location is the product and if so set to node next
+        if (table[compressionKey].getKey().equals(key)){
+            foundValue = table[compressionKey].getValue();
+            table[compressionKey] = table[compressionKey].getNext();
+            this.size--;
+            return foundValue;
+        }
+        //It isn't in the first location, so start to search through the linked list
+        ExternalChainingMapEntry<K, V> current = table[compressionKey];
+        while(current.getNext() != null){
+            if (current.getNext().getKey().equals(key)){
+                foundValue = current.getNext().getValue();
+                current.setNext(current.getNext().getNext());
+                this.size--;
+                return foundValue;
+            }
+            current = current.getNext();
+        }
+        throw new NoSuchElementException();
     }
-
-    private ExternalChainingMapEntry<K, V> removeHelper(ExternalChainingMapEntry<K, V> current, K keySearch) {
-        if (current == null){
-            return null;
-        }
-        if (current.getKey().equals(keySearch)){
-            return current.getNext();
-        }
-        current.setNext(removeHelper(current.getNext(), keySearch));
-        return current;
-    }
-
 
 
     /**
